@@ -1,0 +1,65 @@
+version: "3.9"  # optional since v1.27.0
+services:
+
+  mysql:
+    image: mysql:5.7
+    platform: linux/amd64
+    environment:
+      MYSQL_ROOT_PASSWORD: wordpressr00t!
+      MYSQL_DATABASE: wordpress
+      MYSQL_USER: wordpress
+      MYSQL_PASSWORD: wordpress
+    volumes:
+      - db-data:/var/lib/mysql
+    networks:
+      - backend
+
+  wordpress:
+    build:
+      context: .
+      dockerfile: docker/conf/wordpress/Dockerfile
+    environment:
+      WORDPRESS_DB_HOST: mysql
+      WORDPRESS_DB_USER: wordpress
+      WORDPRESS_DB_PASSWORD: wordpress
+      WORDPRESS_DB_NAME: wordpress
+    volumes:
+      - ./docker/conf/wordpress/ini/cgi.ini:/usr/local/etc/php/conf.d/cgi.ini
+      - ./docker/conf/wordpress/ini/security.ini:/usr/local/etc/php/conf.d/security.ini
+      - ./docker/conf/wordpress/ini/sendmail.ini:/usr/local/etc/php/conf.d/sendmail.ini
+      - ./docker/conf/wordpress/ini/timezone.ini:/usr/local/etc/php/conf.d/timezone.ini
+      - ./docker/conf/wordpress/ini/upload.ini:/usr/local/etc/php/conf.d/upload.ini
+      - ./docker/conf/wordpress/conf/wp-config.php:/var/www/html/wp-config.php:ro
+      - ./docker/conf/wordpress/fpm/www.conf:/usr/local/etc/php-fpm.d/www.conf
+      - wp-backup:/var/www/html/wp-content/backupwordpress-9a736b2682-backups
+    networks:
+      - frontend
+      - backend
+
+  nginx:
+    build:
+      context: .
+      dockerfile: docker/conf/nginx/Dockerfile
+    volumes:
+      - ./docker/conf/nginx/conf/default.conf:/etc/nginx/conf.d/default.conf
+      - wp-backup:/var/www/html/wp-content/backupwordpress-f8562c501b-backups
+    networks:
+      - frontend
+    ports:
+      - "8080:80"
+
+  mailhog:
+    image: mailhog/mailhog
+    ports:
+      - 1025:1025 # smtp server
+      - 8025:8025 # web ui
+    networks:
+      - backend
+
+volumes:
+  db-data: {}
+  wp-backup: {}
+
+networks:
+  frontend: {}
+  backend: {}
